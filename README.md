@@ -1,23 +1,22 @@
 # TypeSafe AI OpenCode Free
 
-An OpenCode Zen free-tier transport variant of TypeSafe AI's `typesafe-ai`
-Codex skill. It preserves the official skill's guidance for building with
-System One, while providing a small helper for calls to OpenCode Zen's
-`jev-1.13-free` model.
+这是 TypeSafe AI 官方 `typesafe-ai` Codex skill 的 OpenCode Zen 免费层传输变体。
+它保留了官方 skill 关于 System One 开发的指导，同时提供一个小型 helper，用于调用
+OpenCode Zen 的 `jev-1.13-free` 模型。
 
-[中文说明](README.zh-CN.md)
+[English README](README.en.md)
 
-## Contents
+## 内容
 
-- `SKILL.md`: the official TypeSafe skill guidance, with a short local note
-  that directs real System One calls through the helper.
-- `bin/systemone-call`: a dependency-free Python 3 command-line helper for
-  posting the canonical System One request body to OpenCode Zen.
-- `LICENSE`: the MIT license distributed with the upstream TypeSafe skill.
+- `SKILL.md`：官方 TypeSafe skill 的完整指导，仅增加了一段本地说明，将实际的
+  System One 请求交给 helper 处理。
+- `bin/systemone-call`：无第三方依赖的 Python 3 命令行 helper，用于将标准的
+  System One 请求体发送到 OpenCode Zen。
+- `LICENSE`：上游 TypeSafe skill 随附的 MIT 许可证。
 
-## Install
+## 安装
 
-Clone the repository, then copy its contents into your Codex skills directory:
+克隆仓库后，将内容复制到 Codex skills 目录：
 
 ```bash
 git clone https://github.com/aftely1337/typesafe-ai-opencode-free.git
@@ -25,28 +24,26 @@ mkdir -p ~/.codex/skills
 cp -R typesafe-ai-opencode-free ~/.codex/skills/
 ```
 
-Restart Codex or start a new session so it can discover the skill.
+重启 Codex 或开启一个新会话，让它发现这个 skill。
 
-## Use the transport helper
+## 使用传输 helper
 
-The helper reads a System One request body from standard input. It defaults to
-the OpenCode Zen System One endpoint and `jev-1.13-free`; no third-party Python
-packages are required.
+helper 从标准输入读取 System One 请求体。默认使用 OpenCode Zen 的 System One
+端点和 `jev-1.13-free`，不需要安装第三方 Python 包。
 
 ```bash
 echo '{
   "questions": {
     "smoke": {
       "type": "noul",
-      "question": "Is the transport working?",
-      "instructions": "Return the probability that the request is working."
+      "question": "传输是否正常工作？",
+      "instructions": "返回该请求正常工作的概率。"
     }
   }
 }' | ~/.codex/skills/typesafe-ai-opencode-free/bin/systemone-call --state ''
 ```
 
-Configure the endpoint, API credential, or default model through environment
-variables when needed:
+需要时可通过环境变量配置端点、凭证或默认模型：
 
 ```bash
 export TYPESAFE_BASE_URL="https://opencode.ai/zen/v1/systemone"
@@ -54,25 +51,22 @@ export TYPESAFE_DEFAULT_MODEL="jev-1.13-free"
 export TYPESAFE_API_KEY="public"
 ```
 
-Run `bin/systemone-call --help` for the full invocation schema. Read the live
-TypeSafe documentation before building a production integration; the model and
-free-tier availability are controlled by their respective providers and can
-change.
+完整的调用格式见 `bin/systemone-call --help`。生产集成前请阅读 TypeSafe 实时文档；
+模型和免费层可用性由相应服务提供方决定，可能发生变化。
 
-## Attribution
+## 致谢与来源
 
-The skill's design guidance and `SKILL.md` originate from the official
-[TypeSafe AI skills repository](https://github.com/typesafe-ai/skills).
+skill 的设计指导和 `SKILL.md` 来自官方
+[TypeSafe AI skills 仓库](https://github.com/typesafe-ai/skills)。
 
-The OpenCode request-transport behavior used by `bin/systemone-call` was
-studied with reference to [opencode2api](https://github.com/jasonxu114514/opencode2api).
-This repository does not vendor or distribute source code from that project.
+`bin/systemone-call` 使用的 OpenCode 请求传输行为参考了
+[opencode2api](https://github.com/jasonxu114514/opencode2api)。本仓库不包含、也不
+分发该项目的源代码。
 
-This is an independent community variant, not an official TypeSafe AI or
-OpenCode project. Use OpenCode Zen in accordance with its applicable terms and
-service limits.
+这是独立的社区变体，并非 TypeSafe AI 或 OpenCode 的官方项目。请按照适用条款和
+服务限制使用 OpenCode Zen。
 
-## License
+## 许可证
 
-The repository is MIT licensed. TypeSafe AI's original copyright notice remains
-in [LICENSE](LICENSE) alongside the copyright notice for the local additions.
+本仓库使用 MIT 许可证。TypeSafe AI 的原始版权声明和本地新增内容的版权声明均保留在
+[LICENSE](LICENSE) 中。
