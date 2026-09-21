@@ -1,5 +1,9 @@
 # TypeSafe AI OpenCode Free
 
+<p align="center">
+    <a href="https://linux.do"><img src="https://shorturl.at/ggSqS" alt="LINUX DO" /></a>
+</p>
+
 An OpenCode Zen free-tier transport variant of TypeSafe AI's `typesafe-ai`
 Codex skill. It preserves the official skill's guidance for building with
 System One, while providing a small helper for calls to OpenCode Zen's

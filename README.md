@@ -1,5 +1,9 @@
 # TypeSafe AI OpenCode Free
 
+<p align="center">
+    <a href="https://linux.do"><img src="https://shorturl.at/ggSqS" alt="LINUX DO" /></a>
+</p>
+
 这是 TypeSafe AI 官方 `typesafe-ai` Codex skill 的 OpenCode Zen 免费层传输变体。
 它保留了官方 skill 关于 System One 开发的指导，同时提供一个小型 helper，用于调用
 OpenCode Zen 的 `jev-1.13-free` 模型。
