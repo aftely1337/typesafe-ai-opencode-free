@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""systemone-call — System One client for OpenCode Zen free tier.
+
+Usage:
+  echo '{"questions":{"my_q":{"type":"noul","question":"hi","instructions":"yes/no"}}}' \\
+    | systemone-call --model jev-1.13-free --state ""
+
+Environment (with defaults):
+  TYPESAFE_BASE_URL       default: https://opencode.ai/zen/v1/systemone
+  TYPESAFE_API_KEY        default: public (OpenCode Zen anonymous credential)
+  TYPESAFE_DEFAULT_MODEL  default: jev-1.13-free
+
+The body schema is the canonical System One shape used by TypeSafe and OpenCode:
+  {
+    "model": "...",
+    "state": <any>,        # str | dict | {} — top-level context
+    "questions": {         # ⚠️ object keyed by question id, NOT an array
+      "<id>": {
+        "type": "choice" | "noul" | "score",   # discriminator
+        "question": "...",
+        "criteria": <per-type>,    # see below
+        "state": <optional per-question context>,
+        "instructions": "..."
+      }
+    }
+  }
+
+Per-type criteria shapes:
+  choice:  { "<label>": { "description": "..." }, ... }     (dict)
+  score:   [ { "description": "level 1" }, ... ]            (list)
+  noul:    optional                                          (probability only)
+"""
+import argparse, hashlib, json, os, platform, re, secrets, string, sys, urllib.request, urllib.error
+
+ALPHA62 = string.ascii_letters + string.digits
+
+def canonical_session_id(signal: str) -> str:
+    if re.match(r'^ses_[0-9a-f]{12}[0-9A-Za-z]{14}$', signal):
+        return signal
+    h = hashlib.sha256(b"ses\x00" + signal.encode()).digest()
+    time_part = h[:6].hex()
+    n = int.from_bytes(h[6:16], 'big')
+    digits = []
+    for _ in range(14):
+        n, r = divmod(n, 62)
+        digits.append(ALPHA62[r])
+    return "ses_" + time_part + "".join(digits)
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="OpenCode Zen System One caller")
+    ap.add_argument("--model", default=os.environ.get("TYPESAFE_DEFAULT_MODEL", "jev-1.13-free"))
+    ap.add_argument("--state", default="")
+    ap.add_argument("--session-signal", default="opencode-cli")
+    ap.add_argument("--base-url", default=os.environ.get("TYPESAFE_BASE_URL", "https://opencode.ai/zen/v1/systemone"))
+    ap.add_argument("--api-key", default=os.environ.get("TYPESAFE_API_KEY", "public"))
+    ap.add_argument("--retries", type=int, default=2)
+    args = ap.parse_args()
+
+    try:
+        body = json.load(sys.stdin)
+    except Exception as exc:
+        print(f"failed to read body from stdin: {exc}", file=sys.stderr)
+        return 2
+
+    body.setdefault("model", args.model)
+    if "state" not in body:
+        body["state"] = args.state
+    body.setdefault("questions", {})
+
+    base = args.base_url.rstrip("/")
+    if not base.endswith("/v1/systemone"):
+        # tolerate base being either the per-model endpoint or the upstream root
+        if base.endswith("/systemone"):
+            url = base
+        else:
+            url = base + "/v1/systemone"
+    else:
+        url = base
+
+    sess = canonical_session_id(args.session_signal)
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+    machine = {"x86_64": "amd64", "aarch64": "arm64"}.get(machine, machine)
+    headers = {
+        "Accept": "application/json, text/event-stream",
+        "Authorization": "Bearer " + args.api_key,
+        "Content-Type": "application/json",
+        "User-Agent": f"opencode/1.18.31 ({system} {machine}; python)",
+        "x-opencode-client": "cli",
+        "x-opencode-session": sess,
+        "x-session-affinity": sess,
+        "X-Session-Id": sess,
+        "x-opencode-request": "req_" + secrets.token_hex(16),
+        "x-opencode-project": "prj_" + secrets.token_hex(12),
+    }
+
+    payload = json.dumps(body).encode()
+    last_err = None
+    for attempt in range(args.retries + 1):
+        req = urllib.request.Request(url, data=payload, method="POST", headers=dict(headers))
+        # rotate request id per attempt
+        headers["x-opencode-request"] = "req_" + secrets.token_hex(16)
+        req = urllib.request.Request(url, data=payload, method="POST", headers=dict(headers))
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                sys.stdout.write(r.read().decode())
+                return 0
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode(errors="replace")
+            last_err = f"HTTP {e.code}: {err_body}"
+            print(f"attempt {attempt+1} failed: {last_err}", file=sys.stderr)
+            if 400 <= e.code < 500 and e.code not in (408, 425, 429):
+                # client-side error, retrying unlikely to help
+                break
+        except urllib.error.URLError as e:
+            last_err = f"URLError: {e}"
+            print(f"attempt {attempt+1} failed: {last_err}", file=sys.stderr)
+        # exponential backoff
+        if attempt < args.retries:
+            import time; time.sleep(0.6 * (2 ** attempt))
+    return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
